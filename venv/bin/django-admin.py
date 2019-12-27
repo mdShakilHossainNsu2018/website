@@ -1,4 +1,4 @@
-#!/home/shakil/code/django/website/venv/bin/python
+#!/home/shakil/PycharmProjects/music_website/venv/bin/python
 from django.core import management
 
 if __name__ == "__main__":

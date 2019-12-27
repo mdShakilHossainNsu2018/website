@@ -1,11 +1,12 @@
+from django.http import JsonResponse
 from django.views import generic
+from django.views.generic import ListView
 from django.views.generic.edit import CreateView, UpdateView, DeleteView
-from .models import Album
+from .forms import SongFrom
+from .models import Album, Song
 from django.urls import reverse_lazy
-from django.shortcuts import render, redirect
-from django.contrib.auth import authenticate, login
-from django.views.generic import View
-from .forms import UserForm
+from django.shortcuts import get_object_or_404, redirect
+from django.contrib.auth.mixins import LoginRequiredMixin
 
 
 class IndexView(generic.ListView):
@@ -21,51 +22,125 @@ class DetailView(generic.DetailView):
     model = Album
 
 
-class AlbumCreate(CreateView):
+class AlbumCreate(LoginRequiredMixin, CreateView):
+    model = Album
+    fields = ['artist', 'album_title', 'genre', 'album_logo']
+
+    # def get(self, request, *args, **kwargs):
+    #     self.user = request.user
+    #     return super(AlbumCreate, self).get(self, request, *args, **kwargs)
+
+    def form_valid(self, form):
+        form.instance.user = self.request.user
+        print(form.instance.user)
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse_lazy('music:index')
+
+
+class AlbumUpdate(LoginRequiredMixin, UpdateView):
     model = Album
     fields = ['artist', 'album_title', 'genre', 'album_logo']
 
 
-class AlbumUpdate(UpdateView):
-    model = Album
-    fields = ['artist', 'album_title', 'genre', 'album_logo']
-
-
-class AlbumDelete(DeleteView):
+class AlbumDelete(LoginRequiredMixin, DeleteView):
     model = Album
     success_url = reverse_lazy('music:index')
 
 
-class UserFormView(View):
-    form_class = UserForm
-    template_name = 'music/registration_form.html'
+class SongCreate(LoginRequiredMixin, CreateView):
+    form_class = SongFrom
+    model = Song
 
-    def get(self, request):
-        form = self.form_class(None)
-        return render(request, self.template_name, {'form': form})
+    def get_success_url(self):
+        return reverse_lazy('music:song-add', kwargs={'pk': self.object.album.pk})
 
-    def post(self, request):
-        form = self.form_class(request.POST)
+    def form_valid(self, form):
+        album = get_object_or_404(Album, pk=self.kwargs['pk'])
+        form.instance.album = album
+        return super(SongCreate, self).form_valid(form)
 
-        if form.is_valid():
-            user = form.save(commit=False)
 
-            # cleaned normalized data
+class SongDelete(LoginRequiredMixin, DeleteView):
+    model = Song
 
-            username = form.cleaned_data['username']
-            password = form.cleaned_data['password']
+    def get_success_url(self, **kwargs):
 
-            user.set_password(password)
-            user.save()
+        return reverse_lazy('music:detail', kwargs={'pk': self.object.album.pk})
 
-            user = authenticate(username=username, password=password)
-            if user is not None:
+    def get_queryset(self):
+        qs = super().get_queryset()
+        return qs.filter(pk=self.kwargs['pk'])
 
-                if user.is_active:
-                    login(request, user)
-                    return redirect('music:index')
-        return render(request, self.template_name, {'form': form})
 
+def favorite(request, pk):
+    song = get_object_or_404(Song, pk=pk)
+    try:
+        if song.is_favorite:
+            song.is_favorite = False
+        else:
+            song.is_favorite = True
+        song.save()
+    except (KeyError, Song.DoesNotExist):
+        return JsonResponse({'success': False})
+    else:
+        return redirect('music:detail', pk=song.album.id)
+
+
+def favorite_album(request, pk):
+    album = get_object_or_404(Album, pk=pk)
+    try:
+        if album.is_favorite:
+            album.is_favorite = False
+        else:
+            album.is_favorite = True
+        album.save()
+    except (KeyError, Album.DoesNotExist):
+        return JsonResponse({'success': False})
+    else:
+        return redirect('music:index')
+
+
+class AllSong(ListView):
+    model = Song
+    template_name = 'music/all_song.html'
+
+#
+# def songToggleFavorite(request, pk):
+#     print(pk)
+#     song = get_object_or_404(Song, pk=pk)
+#     # song = song.save(commit=False)
+#     per_fev = song.is_favorite
+#     # print(per_fev)
+#     # song = song.save(commit=False)
+#     song.is_favorite = not per_fev
+#     song.save()
+#     print(song.album.id)
+#     return reverse_lazy('music:detail', kwargs={'pk': song.album.id})
+#
+#
+# class SongToggleFavorite(LoginRequiredMixin, UpdateView):
+#     model = Song
+#     # template_name = 'music/detail.html'
+#
+#     fields = ('is_favorite', )
+#
+#     def form_valid(self, form):
+#         song = form.save(commit=False)
+#         pre_fev = self.object.is_favorite
+#         # print(pre_fev)
+#         song.is_favorite = pre_fev
+#         song.save()
+#         return super(SongToggleFavorite, self).form_valid(form)
+#
+#     def get_success_url(self, **kwargs):
+#
+#         return reverse_lazy('music:detail', kwargs={'pk': self.object.album.pk})
+#
+#     def get_queryset(self):
+#         qs = super().get_queryset()
+#         return qs.filter(pk=self.kwargs['pk'])
 
 
 

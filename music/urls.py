@@ -6,7 +6,15 @@ app_name = 'music'
 urlpatterns = [
     path('', views.IndexView.as_view(), name='index'),
 
-    path('register/', views.UserFormView.as_view(), name='register'),
+    path('<int:pk>/song-add/', views.SongCreate.as_view(), name='song-add'),
+
+    path('all-songs/', views.AllSong.as_view(), name='all-songs'),
+
+    path('<int:pk>/song-delete/', views.SongDelete.as_view(), name='song-delete'),
+
+    path('<int:pk>/song-toggle-favorite/', views.favorite, name='song-toggle-favorite'),
+
+    path('<int:pk>/album-toggle-favorite/', views.favorite_album, name='album-toggle-favorite'),
 
     path('<int:pk>/', views.DetailView.as_view(), name="detail"),
 

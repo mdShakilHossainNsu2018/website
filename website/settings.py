@@ -31,6 +31,7 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -39,6 +40,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'music.apps.MusicConfig',
     'bootstrap4',
+    'auth.apps'
+
 ]
 
 MIDDLEWARE = [
@@ -125,3 +128,9 @@ STATIC_URL = '/static/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 MEDIA_URL = '/media/'
+
+LOGIN_REDIRECT_URL = 'music:index'
+
+LOGIN_URL = 'auth:login'
+
+LOGOUT_REDIRECT_URL = 'music:index'
